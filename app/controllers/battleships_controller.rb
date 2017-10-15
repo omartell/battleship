@@ -23,7 +23,7 @@ class BattleshipSession
   end
 
   def start(positions)
-    ships  = positions.flat_map { |(x,y)| [[x,y], [x, y - 1], [x,y - 2]] }
+    ships  = positions.map { |(x,y)| [[x,y], [x, y - 1], [x,y - 2]] }
     errors = validate_starting_positions(ships)
     return errors if errors.present?
 
@@ -40,13 +40,19 @@ class BattleshipSession
 
     session[:shots] ||= []
     session[:shots] << position
+    sunk        = session[:ships].select { |ship| (ship & session[:shots]).size == 3 }
+    new_session = session.merge(sunk: sunk, ships: session[:ships] - sunk)
 
-    store.save_session(session_id, session)
+    store.save_session(session_id, new_session)
 
-    intersection = session[:shots] & session[:ships]
-
-    if intersection.present?
+    if new_session[:ships].empty?
+      { message:"game over", session_id: session_id }
+    elsif sunk.any?
+      { message:"sunk", session_id: session_id }
+    elsif session[:ships].any?{ |ship| ship.include?(position) }
       { message:"hit", session_id: session_id }
+    else
+      { message:"miss", session_id: session_id }
     end
   end
 
@@ -54,7 +60,7 @@ class BattleshipSession
 
   def validate_starting_positions(positions)
     return { message: "invalid-initialization" } unless positions.present?
-    return { message: "invalid-initialization" } unless  positions.all?(&method(:in_map?))
+    return { message: "invalid-initialization" } unless positions.flatten(1).all?(&method(:in_map?))
   end
 
   def validate_shot(session, session_id, position)
@@ -70,7 +76,7 @@ end
 class BattleshipsController < ApplicationController
   def create
     positions = params.fetch(:positions)
-    result   = BattleshipSession.new(Store).start(positions)
+    result    = BattleshipSession.new(Store).start(positions)
 
     if result[:message] == "ok"
       render json: { message: result[:message], links: { self: battleship_path(result[:session_id]) } }
@@ -84,7 +90,7 @@ class BattleshipsController < ApplicationController
     result  = BattleshipSession.new(Store).record_shot(id, params.fetch(:position))
     message = result[:message]
 
-    if %w(hit).include?(message)
+    if %w(hit miss).include?(message)
       render json: { message: message , links: { self: battleship_path(id) }}
     else
       render json: { message: message }, status: 400
