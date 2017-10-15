@@ -1,14 +1,24 @@
-class BattleshipsController < ApplicationController
-  def create
-    positions = params.fetch(:positions)
-    id        = SecureRandom::uuid
+module Battleship
+  module_function
 
-    self.class.battleships[id] = { initial: positions }
-
-    render json: { message: "OK", positions: positions, links: { self: battleship_path(id) } }
+  def start(positions)
+    id              = SecureRandom::uuid
+    battleships[id] = { initial: positions }
+    id
   end
 
-  def self.battleships
+  def battleships
     @battleships ||= {}
+  end
+  private :battleships
+end
+
+class BattleshipsController < ApplicationController
+
+  def create
+    positions = params.fetch(:positions)
+    id        = Battleship.start(positions)
+
+    render json: { message: "OK", links: { self: battleship_path(id) } }
   end
 end
