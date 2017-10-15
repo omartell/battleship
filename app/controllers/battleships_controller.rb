@@ -15,8 +15,8 @@ class BattleshipsController < ApplicationController
     result  = BattleshipSession.new(Store).record_shot(id, params.fetch(:position))
     message = result[:message]
 
-    if %w(hit miss).include?(message)
-      render json: { message: message , links: { self: battleship_path(id) }}
+    if %w(hit miss sunk game-over).include?(message)
+      render json: { message: message, links: { self: battleship_path(id) }}
     else
       render json: { message: message }, status: 400
     end

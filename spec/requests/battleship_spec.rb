@@ -1,6 +1,11 @@
 require "rails_helper"
 
 RSpec.describe Battleship, type: :request do
+
+  def shot(position, battleship)
+    put battleship.dig("links", "self"), params: { position: position }, as: :json
+  end
+
   context "initialization" do
     it "allows to initialize the position of the ships" do
       post battleships_path, params: { positions: [[0,3], [4,8], [6,6]]}, as: :json
@@ -22,10 +27,6 @@ RSpec.describe Battleship, type: :request do
       expect(response.status).to eq(400)
       expect(response.parsed_body).to include("message" => "invalid-initialization")
     end
-  end
-
-  def shot(position, battleship)
-    put battleship.dig("links", "self"), params: { position: position }, as: :json
   end
 
   context "recording shots" do
@@ -95,7 +96,8 @@ RSpec.describe Battleship, type: :request do
         shot(position, battleship)
       end
 
-      expect(response.parsed_body).to include("message" => "game over")
+      expect(response.status).to eq(200)
+      expect(response.parsed_body).to include("message" => "game-over")
     end
   end
 end

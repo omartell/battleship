@@ -29,7 +29,7 @@ class BattleshipSession
     store.save_session(session_id, new_session)
 
     if new_session[:ships].empty?
-      { message:"game over", session_id: session_id }
+      { message:"game-over", session_id: session_id }
     elsif sunk.any?
       { message:"sunk", session_id: session_id }
     elsif session[:ships].any?{ |ship| ship.include?(position) }
