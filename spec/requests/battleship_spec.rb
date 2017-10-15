@@ -7,4 +7,14 @@ RSpec.describe Battleship, type: :request do
     expect(response.parsed_body).to include("message" => "OK")
     expect(response.parsed_body).to include("links" => { "self" => a_string_matching(%r{/battleships/(\w|\d|-)+})})
   end
+
+  it "records sucessful shots for current battleships" do
+    post battleships_path, params: { positions: [[0,3], [4,8], [6,6]]}, as: :json
+
+    battleship = response.parsed_body
+
+    put battleship.dig("links", "self"), params: { position: [0,3] }, as: :json
+
+    expect(response.parsed_body).to include("message" => "hit")
+  end
 end
