@@ -24,17 +24,21 @@ RSpec.describe Battleship, type: :request do
     end
   end
 
+  def shot(position, battleship)
+    put battleship.dig("links", "self"), params: { position: position }, as: :json
+  end
+
   context "recording shots" do
     it "reports sucessful shots for current battleships" do
       post battleships_path, params: { positions: [[0,3], [4,8], [6,6]]}, as: :json
 
       battleship = response.parsed_body
 
-      put battleship.dig("links", "self"), params: { position: [0,3] }, as: :json
+      shot([0,3], battleship)
 
       expect(response.parsed_body).to include("message" => "hit")
 
-      put battleship.dig("links", "self"), params: { position: [0,2] }, as: :json
+      shot([0,2], battleship)
 
       expect(response.parsed_body).to include("message" => "hit")
     end
@@ -51,11 +55,11 @@ RSpec.describe Battleship, type: :request do
 
       battleship = response.parsed_body
 
-      put battleship.dig("links", "self"), params: { position: [0,3] }, as: :json
+      shot([0,3], battleship)
 
       expect(response.parsed_body).to include("message" => "hit")
 
-      put battleship.dig("links", "self"), params: { position: [0,4] }, as: :json
+      shot([0,4], battleship)
 
       expect(response.parsed_body).to include("message" => "miss")
     end
@@ -65,21 +69,19 @@ RSpec.describe Battleship, type: :request do
 
       battleship = response.parsed_body
 
-      put battleship.dig("links", "self"), params: { position: [0,3] }, as: :json
-
-      put battleship.dig("links", "self"), params: { position: [0,2] }, as: :json
-
-      put battleship.dig("links", "self"), params: { position: [0,1] }, as: :json
+      [[0,3], [0,2], [0,1]].each do |position|
+        shot(position, battleship)
+      end
 
       expect(response.parsed_body).to include("message" => "sunk")
 
-      put battleship.dig("links", "self"), params: { position: [4,8] }, as: :json
+      shot([4,8], battleship)
 
       expect(response.parsed_body).to include("message" => "hit")
 
-      put battleship.dig("links", "self"), params: { position: [4,7] }, as: :json
+      shot([4,7], battleship)
 
-      put battleship.dig("links", "self"), params: { position: [4,6] }, as: :json
+      shot([4,6], battleship)
 
       expect(response.parsed_body).to include("message" => "sunk")
     end
@@ -89,23 +91,9 @@ RSpec.describe Battleship, type: :request do
 
       battleship = response.parsed_body
 
-      put battleship.dig("links", "self"), params: { position: [0,3] }, as: :json
-
-      put battleship.dig("links", "self"), params: { position: [0,2] }, as: :json
-
-      put battleship.dig("links", "self"), params: { position: [0,1] }, as: :json
-
-      put battleship.dig("links", "self"), params: { position: [4,8] }, as: :json
-
-      put battleship.dig("links", "self"), params: { position: [4,7] }, as: :json
-
-      put battleship.dig("links", "self"), params: { position: [4,6] }, as: :json
-
-      put battleship.dig("links", "self"), params: { position: [6,6] }, as: :json
-
-      put battleship.dig("links", "self"), params: { position: [6,5] }, as: :json
-
-      put battleship.dig("links", "self"), params: { position: [6,4] }, as: :json
+      [[0,3], [0,2], [0,1], [4,8], [4,7], [4,6],[6,6], [6,5], [6,4]].each do |position|
+        shot(position, battleship)
+      end
 
       expect(response.parsed_body).to include("message" => "game over")
     end
