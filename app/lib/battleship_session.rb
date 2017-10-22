@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class BattleshipSession
   attr_accessor :store
 
@@ -6,60 +8,56 @@ class BattleshipSession
   end
 
   def start(positions)
-    ships  = positions.map { |(x, y)| [[x, y], [x, y - 1], [x, y - 2]] }
-    errors = validate_initial_positions(ships)
+    map    = build_map(positions.map { |position| Ship.new(start: position) })
+    errors = validate_initial_positions(map.keys)
+
     return errors if errors.present?
 
     session_id = SecureRandom.uuid
-    store.save_session(session_id, ships: ships)
+    store.save_session(session_id, map.values)
 
     { message: 'ok', session_id: session_id }
   end
 
-  def record_shot(session_id, shot)
+  def shot(session_id, coordinate)
     session = store.get_session(session_id)
-    errors  = validate_shot(session, session_id, shot)
+    errors  = validate_session(session)
     return errors if errors.present?
 
-    sunk, session = new_session_from(session, shot)
-    store.save_session(session_id, session)
+    map  = build_map(session.map { |s| Ship.new(ship: s) })
+    shot = map[coordinate]&.shot(coordinate)
 
-    if session[:ships].empty?
-      { message: 'game-over', session_id: session_id }
-    elsif sunk.any?
-      { message: 'sunk', session_id: session_id }
-    elsif session[:ships].any? { |ship| ship.include?(shot) }
-      { message: 'hit', session_id: session_id }
-    else
+    store.save_session(session_id, map.values)
+
+    if shot.nil?
       { message: 'miss', session_id: session_id }
+    elsif map.values.all?(&:sunk?)
+      { message: 'game-over', session_id: session_id }
+    elsif shot == :hit
+      { message: 'hit', session_id: session_id }
+    elsif shot == :sunk
+      { message: 'sunk', session_id: session_id }
     end
   end
 
   private
 
-  def new_session_from(session, shot)
-    session = session.merge(shots: session.fetch(:shots, []) + [shot])
-    sunk    = session[:ships].select { |ship| sunk?(session, ship) }
-    new_session = session.merge(sunk: session.fetch(:sunk, []) + sunk,
-                                ships: session.fetch(:ships) - sunk)
-
-    [sunk, new_session]
-  end
-
-  def sunk?(session, ship)
-    (ship & session[:shots]).size == 3
+  def build_map(ships)
+    ships.each_with_object({}) do |s, acc|
+      s.coordinates.each do |c|
+        acc[c] = s
+      end
+    end
   end
 
   def validate_initial_positions(positions)
-    if positions.empty? ||!positions.flatten(1).all?(&method(:in_map?))
+    if positions.empty? || !positions.all?(&method(:in_map?))
       { message: 'invalid-initialization' }
     end
   end
 
-  def validate_shot(session, _session_id, _position)
-    if !session.present?
-      { message: 'missing-session' }
-    end
+  def validate_session(session)
+    { message: 'missing-session' } unless session.present?
   end
 
   def in_map?(position)

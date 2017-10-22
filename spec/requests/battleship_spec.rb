@@ -54,7 +54,7 @@ RSpec.describe Battleship, type: :request do
     it "reports non successful shots as misses" do
       post battleships_path, params: { positions: [[0,3], [4,8], [6,6]]}, as: :json
 
-      battleship = response.parsed_body
+     battleship = response.parsed_body
 
       shot([0,3], battleship)
 
